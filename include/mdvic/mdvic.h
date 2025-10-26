@@ -19,6 +19,7 @@ struct MdvicOptions {
     bool enable_lint; /* default true; can be disabled by --no-lint or MDVIC_NO_LINT=1 */
     bool enable_wrap; /* default false (no-wrap). Enable with --wrap or MDVIC_WRAP=1 */
     bool enable_osc8; /* default true; can be disabled by --no-osc8 or MDVIC_NO_OSC8=1 */
+    bool accent_group; /* default false (apply accent to last char), set true to apply to group (function-style) */
 };
 
 /* Apply environment overrides (MDVIC_NO_COLOR, MDVIC_WIDTH, MDVIC_MATH). */

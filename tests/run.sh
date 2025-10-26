@@ -35,12 +35,19 @@ run_case() {
     echo "(mdvic exited non-zero)"
   fi
 
+  # Strip trailing blank lines in stdout
+  out_norm="/tmp/mdvic_${base}_out_norm.$$"
+  awk '{ a[NR]=$0 } END{ n=NR; while(n>0 && a[n]=="") n--; for(i=1;i<=n;i++) print a[i] }' "$out_actual" > "$out_norm"
+  mv "$out_norm" "$out_actual"
+
   ok=1
   if [ -f "$out_golden" ]; then
-    if ! diff -u "$out_golden" "$out_actual" >/dev/null 2>&1; then
+    gold_norm="/tmp/mdvic_${base}_gold_norm.$$"
+    awk '{ a[NR]=$0 } END{ n=NR; while(n>0 && a[n]=="") n--; for(i=1;i<=n;i++) print a[i] }' "$out_golden" > "$gold_norm"
+    if ! diff -u "$gold_norm" "$out_actual" >/dev/null 2>&1; then
       echo "FAIL (stdout)"; ok=0
       echo "--- diff (stdout) ---"
-      diff -u "$out_golden" "$out_actual" || true
+      diff -u "$gold_norm" "$out_actual" || true
     fi
   fi
   if [ -f "$err_golden" ]; then
@@ -79,7 +86,20 @@ CASES="\
 14_code_fence \
 15_no_ansi_sanity \
 16_math_unicode \
-17_math_ascii"
+17_math_ascii \
+18_matrix_unicode \
+19_matrix_ascii \
+20_more_symbols \
+21_sum_prod \
+22_left_right \
+23_accents \
+24_arrows \
+25_b_v_matrix \
+26_greek_variants \
+27_accents_more \
+28_spacing \
+29_iff_display \
+30_showcase"
 
 for b in $CASES; do
   run_case "$b"

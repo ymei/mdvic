@@ -33,6 +33,7 @@ int main(int argc, char **argv) {
     opt.enable_lint = true;
     opt.enable_wrap = false; /* default no-wrap */
     opt.enable_osc8 = true;
+    opt.accent_group = false; /* default: accent last char */
 
     mdvic_apply_env_overrides(&opt);
 
@@ -84,6 +85,12 @@ int main(int argc, char **argv) {
             opt.enable_osc8 = false; i++;
         } else if (strcmp(arg, "--osc8") == 0) {
             opt.enable_osc8 = true; i++;
+        } else if (strncmp(arg, "--accent=", 9) == 0) {
+            const char *am = arg + 9;
+            if (strcmp(am, "last") == 0) opt.accent_group = false;
+            else if (strcmp(am, "group") == 0) opt.accent_group = true;
+            else { fprintf(stderr, "Invalid accent mode: %s\n", am); return 2; }
+            i++;
         } else if (arg[0] == '-') {
             fprintf(stderr, "Unknown option: %s\n", arg);
             print_usage(prog);

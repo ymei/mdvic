@@ -116,7 +116,7 @@ int mdvic_wrap_write_pref2(FILE *out, const char *s, size_t len, int width, int 
             ccol += (prefix_next ? prefix_next_len : 0);
         }
         if (fwrite(s + i, 1, consumed, out) != consumed) return -1;
-        ccol += (width > 0) ? w : 0;
+        ccol += w;
         i += consumed;
     }
     if (col) *col = ccol;

@@ -1,6 +1,6 @@
 # mdvic
 
-A minimal terminal renderer for Markdown with inline and display math.  Implemented in C.  Uses `cmark` for parsing and a compact Unicode math layer for `$…$` and `$$…$$`.  Outputs ANSI suitable for any TTY or `less -R`.  No browser, no TeX engine, no temporary files.
+mdvic is a minimal, fast terminal renderer for Markdown with inline and display math. It parses CommonMark using `cmark`, renders to ANSI, and includes a compact Unicode math layer. Output is suitable for any TTY or `less -RS`. No browser, no TeX engine, no temporary files.
 
 ## Purpose
 
@@ -10,7 +10,7 @@ Provide a single static binary that:
 * Renders Markdown to ANSI with correct width accounting and soft wrapping.
 * Converts a strict TeX-style math subset to readable Unicode or ASCII for terminals.
 
-Target users work primarily in terminals or within Emacs shells and need fast, dependency-light previews.  Exact LaTeX page layout is out of scope.  Prose and documentation fidelity is the priority.
+Target users work primarily in terminals or within editor shells and need fast, dependency-light previews. Exact LaTeX page layout is out of scope. Prose and documentation fidelity is the priority.
 
 ## Non-Goals
 
@@ -21,12 +21,12 @@ Target users work primarily in terminals or within Emacs shells and need fast, d
 
 ## Features
 
-* CommonMark parsing using `cmark` (vendored or linked).
-* ANSI renderer with an internal `wcwidth()` table for Unicode correctness.
-* OSC-8 terminal hyperlinks with safe fallbacks.
-* GFM-style tables with two-pass width measurement and padding.
-* Math subset: Greek and common symbols, superscripts/subscripts, `\frac`, `\sqrt`, small matrices.
-* Configurable color, output width, and math rendering mode (Unicode or ASCII).
+- CommonMark parsing using `cmark`
+- ANSI renderer with an internal `wcwidth()` table
+- OSC-8 terminal hyperlinks with safe fallbacks
+- GFM-style tables (two-pass width measurement and padding)
+- Math subset: Greek, operators, superscripts/subscripts, fractions, roots, matrices
+- Configurable color, output width, and math rendering mode (Unicode or ASCII)
 
 ## Quick Start
 
@@ -57,7 +57,7 @@ MDVIC_NO_OSC8=1         # disable OSC-8 hyperlinks
 ## CLI
 
 ```
-mdvic [--no-color] [--no-lint] [--wrap|--no-wrap] [--width N] [--math {unicode|ascii}] [--no-osc8] [FILE...]
+mdvic [--no-color] [--no-lint] [--wrap|--no-wrap] [--width N] [--math {unicode|ascii}] [--no-osc8] [--accent {last|group}] [FILE...]
 ```
 
 * No file means read stdin.
@@ -96,7 +96,7 @@ LaTeX source:
 \frac{d}{dx}\sqrt{x} = \frac{1}{2\sqrt{x}}
 ```
 
-## Architecture
+## Architecture (overview)
 
 * **Parser (`cmark`)**.  Produces an AST for CommonMark.  mdvic vendors `cmark` by default to avoid external installation.
 * **Renderer**.  Maps blocks and spans to ANSI with a small formatting stack.  Handles headings, paragraphs, lists, block quotes, and code fences.
@@ -106,7 +106,7 @@ LaTeX source:
 * **Tables**.  Two-pass rendering for GFM tables to compute column widths, then pad cells consistently.
 * **Term capabilities**.  Detects color depth and OSC-8 hyperlink support via environment heuristics with opt-out flags.
 
-## Supported math subset (initial)
+## Supported math subset (high-level)
 
 * Greek and symbols: `\alpha … \Omega`, `\pm`, `\times`, `\cdot`, `\partial`, `\nabla`, `\infty`, `\le`, `\ge`, `\neq`.
 * Superscripts and subscripts: `x^{2}`, `x_i`, nested with `{}`.
@@ -137,6 +137,28 @@ Library and platform notes:
 * `wcwidth()` tables are compiled in.
 * On systems without static libc, the Makefile falls back to dynamic linking.
 
+## Unicode width tables (optional)
+
+mdvic can use a pre-generated Unicode width table to make display width
+calculations consistent across platforms.
+
+- Inputs: UnicodeData.txt and EastAsianWidth.txt from the Unicode database.
+- Generator: awk + sh (no Python).
+- Output: `include/mdvic/wcwidth_table.h` (picked up automatically by the build).
+
+Steps:
+
+```sh
+# Point UNICODE_DIR at a folder containing UnicodeData.txt and EastAsianWidth.txt
+make wcwidth-table UNICODE_DIR=/path/to/unicode
+
+# Rebuild
+make
+```
+
+If the header is not present, mdvic uses an internal heuristic that treats
+combining marks as width 0 and East Asian W/F classes as width 2.
+
 ## Testing
 
 * CommonMark spec tests: import the official suite and run all non-HTML cases.
@@ -157,39 +179,7 @@ Library and platform notes:
 
 ## Development plan
 
-**M0 — Parser and core renderer**
-
-* Integrate `cmark` and implement block/inline rendering.
-* Add ANSI style theme and no-color mode.
-* Ship initial `wcwidth()` and wrapping.
-
-**M1 — Tables and hyperlinks**
-
-* Two-pass GFM table layout and alignment.
-* OSC-8 hyperlinks with detection and fallback.
-
-**M2 — Math subset v1**
-
-* `$…$` and `$$…$$` scanning with nesting guards.
-* Unicode path for Greek, super/subscripts, `\frac`, `\sqrt`.
-* ASCII fallback path and configuration flag.
-
-**M3 — Matrices and stacked fractions**
-
-* `pmatrix` rendering with width-aware cell padding.
-* Multi-line fraction layout when needed.
-
-**M4 — Robustness and test coverage**
-
-* Adopt CommonMark tests into CI.
-* Add golden tests for math and tables across width modes.
-* Unicode table update tool and documented process.
-
-**M5 — Packaging**
-
-* Release tarballs.
-* Man page `mdvic(1)` and shell completions.
-* Homebrew, AUR, and Debian packaging recipes.
+See DEVELOPMENT.md for milestones and roadmap.
 
 ## Contributing
 
@@ -197,4 +187,4 @@ Keep changes small and well-scoped.  Include tests for any new Markdown construc
 
 ## License
 
-MIT is preferred.  BSD-2 is acceptable.  Choose one before the first tagged release.
+BSD 2-Clause. See LICENSE.

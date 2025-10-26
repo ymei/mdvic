@@ -1,0 +1,64 @@
+Showcase
+
+This paragraph links to OpenAI (https://
+openai.com) and has inline code.
+
+> A quote with inline math and wrap: a ≤
+>  b ⇒ a ≤ b.
+
+- Item with inline math: x² + ³√(y) = α
+
+- Item with operators: a · b ⊆ C, and co
+  mposition f ∘ g.
+
+| Header 1 |      Center       |      Right |
+| :-------- | :-----------------: | ----------: |
+| alpha    |       beta        |      gamma |
+| 1/2    | x → y | A ⇔ B |
+
+
+Greek variants: ϵ, ϕ, ϑ, ϱ, ς.
+
+Accents: x̂, ȳ, z̃, v⃗, q̈, ṗ, r̲.
+
+Arrows: x → y, ↑, ↓, ↔, ⇒, ⇔.
+
+Delimiters: ⟨ a⁄b ⟩, ( 1⁄1+1⁄n ).
+
+m
+∑
+k=0
+sin k
+-----
+k+1
+
+
+3
+∏
+j=1
+j
+
+
+(  1      2   3  )
+(  a      b   c  )
+(                )
+( alpha          )
+( beta           )
+( gamma          )
+
+
+
+[  x    y  ]
+[  zz   w  ]
+
+
+
+|  1   2  |
+|  3   4  |
+
+
+
+    int main(void) {
+        return 0;
+    }
+

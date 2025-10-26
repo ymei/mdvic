@@ -19,6 +19,18 @@
 #endif
 #include "mdvic/wcwidth.h"
 
+static int heading_color_code(int level) {
+    switch (level) {
+        case 1: return 31; /* red */
+        case 2: return 33; /* yellow */
+        case 3: return 32; /* green */
+        case 4: return 36; /* cyan */
+        case 5: return 34; /* blue */
+        case 6: return 35; /* magenta */
+        default: return -1;
+    }
+}
+
 /* ---------------- Rendering primitives ---------------- */
 
 struct Style {
@@ -40,6 +52,7 @@ struct Out {
     struct Style style;
     int list_depth;
     int quote_depth;
+    int list_tight; /* 1 when rendering a tight list */
     char prefix_first[32];
     int prefix_first_len;
     char prefix_next[32];
@@ -63,6 +76,7 @@ static void out_init(struct Out *o, FILE *out, int width, const struct MdvicOpti
     style_init(&o->style);
     o->list_depth = 0;
     o->quote_depth = 0;
+    o->list_tight = 0;
     o->prefix_first[0] = '\0';
     o->prefix_first_len = 0;
     o->prefix_next[0] = '\0';
@@ -181,10 +195,11 @@ static void render_text_with_math(struct Out *o, const char *lit, const struct M
             break;
         }
         char *mout = NULL; size_t mlen = 0;
-        if (mdvic_math_render(start, (size_t)(end - start), opt, &mout, &mlen) == 0 && mout) {
-            if (count >= 2) { if (o->col != 0) out_newline(o); }
+        int is_display = (count >= 2);
+        if (mdvic_math_render(start, (size_t)(end - start), opt, is_display, &mout, &mlen) == 0 && mout) {
+            if (is_display) { if (o->col != 0) out_newline(o); }
             out_write(o, mout, mlen);
-            if (count >= 2) { out_newline(o); }
+            if (is_display) { out_newline(o); }
             free(mout);
         } else {
             out_write(o, start, (size_t)(end - start));
@@ -542,8 +557,17 @@ static void render_node(struct Out *o, cmark_node *node, const struct MdvicOptio
     case CMARK_NODE_PARAGRAPH: {
         if (!mdvic_render_gfm_table_if_any(o, node, opt)) {
             render_inlines(o, node, opt);
-            out_newline(o);
-            out_newline(o);
+            if (o->list_depth > 0) {
+                if (o->list_tight) {
+                    out_newline(o);
+                } else {
+                    out_newline(o);
+                    out_newline(o);
+                }
+            } else {
+                out_newline(o);
+                out_newline(o);
+            }
         }
         break;
     }
@@ -551,8 +575,7 @@ static void render_node(struct Out *o, cmark_node *node, const struct MdvicOptio
         int level = cmark_node_get_heading_level(node);
         struct Style saved, delta; style_init(&delta);
         delta.bold = 1;
-        /* map level to a color */
-        delta.fg = (level == 1) ? 36 : (level == 2) ? 33 : 32; /* cyan, yellow, green */
+        delta.fg = heading_color_code(level);
         style_push(o, &saved, &delta);
         render_inlines(o, node, opt);
         style_pop(o, &saved);
@@ -626,6 +649,7 @@ static void render_node(struct Out *o, cmark_node *node, const struct MdvicOptio
         int start = cmark_node_get_list_start(node);
         int index = start ? start : 1;
         o->list_depth++;
+        int prev_tight = o->list_tight; o->list_tight = tight ? 1 : 0;
         for (cmark_node *it = cmark_node_first_child(node); it; it = cmark_node_next(it)) {
             char bullet[32], spaces[32];
             if (lt == CMARK_ORDERED_LIST) { snprintf(bullet, sizeof(bullet), "%d. ", index++); }
@@ -640,8 +664,12 @@ static void render_node(struct Out *o, cmark_node *node, const struct MdvicOptio
                 render_node(o, blk, opt);
             }
             out_clear_prefix(o);
-            if (!tight) out_newline(o);
         }
+        if (tight) {
+            /* Respect a blank line after the last item for tight lists */
+            out_newline(o);
+        }
+        o->list_tight = prev_tight;
         o->list_depth--;
         break;
     }
@@ -769,6 +797,11 @@ void mdvic_apply_env_overrides(struct MdvicOptions *opt) {
         if (strcmp(math, "ascii") == 0) opt->math_mode = MDVIC_MATH_ASCII;
         else if (strcmp(math, "unicode") == 0) opt->math_mode = MDVIC_MATH_UNICODE;
     }
+    const char *accent = getenv("MDVIC_ACCENT");
+    if (accent && accent[0] != '\0') {
+        if (strcmp(accent, "group") == 0) opt->accent_group = true;
+        else if (strcmp(accent, "last") == 0) opt->accent_group = false;
+    }
 }
 
 int mdvic_detect_width(void) {
@@ -800,3 +833,4 @@ int mdvic_detect_width(void) {
     }
     return 0;
 }
+ 

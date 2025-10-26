@@ -2,6 +2,10 @@ Inlined: x² + αi and a⁄b, √(x), and ³√(y
 ).
 
 Display: 
-d⁄dx√(x) = 1⁄2√(x)
-
+d
+--
+dx√(x) = 
+1
+-------
+2√(x)
 

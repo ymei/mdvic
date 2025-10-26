@@ -2,6 +2,10 @@ Inlined: x^2 + alpha_i and a/b, sqrt(x),
  and root[3](y).
 
 Display: 
-d/dxsqrt(x) = 1/2sqrt(x)
-
+d
+--
+dxsqrt(x) = 
+1
+--------
+2sqrt(x)
 
