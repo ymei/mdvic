@@ -16,6 +16,9 @@ struct MdvicOptions {
     bool no_color;
     int width; /* 0 = auto-detect */
     enum mdvic_math_mode math_mode;
+    bool enable_lint; /* default true; can be disabled by --no-lint or MDVIC_NO_LINT=1 */
+    bool enable_wrap; /* default false (no-wrap). Enable with --wrap or MDVIC_WRAP=1 */
+    bool enable_osc8; /* default true; can be disabled by --no-osc8 or MDVIC_NO_OSC8=1 */
 };
 
 /* Apply environment overrides (MDVIC_NO_COLOR, MDVIC_WIDTH, MDVIC_MATH). */
@@ -28,4 +31,3 @@ int mdvic_detect_width(void);
 int mdvic_render_stream(FILE *in, FILE *out, const struct MdvicOptions *opt, const char *filename);
 
 #endif /* MDVIC_MDVIC_H */
-

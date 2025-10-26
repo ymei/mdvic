@@ -1,0 +1,90 @@
+.TH mdvic 1 "mdvic" "mdvic"
+.SH NAME
+mdvic \- minimal terminal Markdown renderer with math and tables
+.SH SYNOPSIS
+.B mdvic
+[
+.B --no-color
+]
+[
+.B --no-lint
+]
+[
+.B --wrap | --no-wrap
+]
+[
+.B --width
+\fIN\fR
+]
+[
+.B --math
+\fIunicode|ascii\fR
+]
+[
+.B --no-osc8
+]
+[
+.I FILE...
+]
+.SH DESCRIPTION
+.B mdvic
+parses CommonMark (via libcmark) and renders ANSI for headings, emphasis,
+inline code, block quotes, lists, and GFM-style tables. It can optionally
+convert a strict subset of TeX-style math (planned) into Unicode/ASCII.
+
+By default mdvic does not soft-wrap; use your pager to control wrapping.
+Enable pre-wrap with \fB--wrap --width N\fR when desired.
+.SH OPTIONS
+.TP
+.B --no-color
+Disable ANSI colors.
+.TP
+.B --no-lint
+Disable lint warnings. Lint normally reports unclosed fences, unmatched
+inline backticks, and malformed table rows to stderr.
+.TP
+.B --wrap, --no-wrap
+Enable or disable pre-wrapping. No-wrap is the default.
+.TP
+.BI --width " N"
+When wrapping is enabled, set the wrap width. If omitted, mdvic tries to
+detect terminal width.
+.TP
+.BI --math " unicode|ascii"
+Select math rendering mode (planned: default unicode).
+.TP
+.B --no-osc8
+Disable OSC-8 hyperlink emission; fall back to printing "text (URL)".
+.SH ENVIRONMENT
+.TP
+.B MDVIC_NO_COLOR=1
+Disable ANSI colors.
+.TP
+.B MDVIC_NO_LINT=1
+Disable lint warnings.
+.TP
+.B MDVIC_WRAP=1, MDVIC_NO_WRAP=1
+Enable or disable pre-wrapping.
+.TP
+.B MDVIC_NO_OSC8=1
+Disable OSC-8 hyperlinks.
+.TP
+.B MDVIC_WIDTH=\fIN\fR
+Override detected terminal width (when wrapping).
+.TP
+.B MDVIC_MATH=ascii
+Use ASCII math fallbacks instead of Unicode.
+.SH EXIT STATUS
+Returns 0 on success, nonzero on error.
+.SH EXAMPLES
+.PP
+Render with pager without hard wraps:
+.IP
+mdvic README.md | less -RS
+.PP
+Enable pre-wrap at 80 columns:
+.IP
+mdvic --wrap --width 80 README.md
+.SH SEE ALSO
+.BR less (1)
+

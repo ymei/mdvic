@@ -1,0 +1,8 @@
+- This list item should wrap across line
+  s and continue with a hanging indent t
+  o match the bullet width.
+
+1. This is an ordered list item that als
+   o wraps and aligns subsequent lines c
+   orrectly.
+

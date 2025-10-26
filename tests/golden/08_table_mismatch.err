@@ -1,0 +1,2 @@
+cases/08_table_mismatch.md:4: table row has 2 columns; expected 3
+cases/08_table_mismatch.md:5: table row has 4 columns; expected 3

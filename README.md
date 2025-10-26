@@ -36,8 +36,8 @@ git clone https://example.com/mdvic.git
 cd mdvic
 make
 
-# render to TTY
-./mdvic README.md | less -R
+# render to TTY (pager recommended)
+./mdvic README.md | less -RS
 
 # direct view without pager
 ./mdvic notes.md
@@ -49,16 +49,34 @@ Environment variables:
 MDVIC_NO_COLOR=1        # disable ANSI colors
 MDVIC_WIDTH=100         # override detected terminal width
 MDVIC_MATH=ascii        # ASCII fallbacks instead of Unicode math
+MDVIC_WRAP=1            # enable pre-wrapping (default: no-wrap)
+MDVIC_NO_WRAP=1         # force-disable pre-wrapping
+MDVIC_NO_OSC8=1         # disable OSC-8 hyperlinks
 ```
 
 ## CLI
 
 ```
-mdvic [--no-color] [--width N] [--math {unicode|ascii}] [FILE...]
+mdvic [--no-color] [--no-lint] [--wrap|--no-wrap] [--width N] [--math {unicode|ascii}] [--no-osc8] [FILE...]
 ```
 
 * No file means read stdin.
 * Multiple files render sequentially with a separator line.
+* No-wrap is the default. Use `--wrap --width N` to pre-wrap; otherwise let your terminal/pager handle wrapping. With `less`, `-S` prevents hard wrapping.
+
+## Linting
+
+mdvic performs a lightweight lint pass before rendering and reports issues to stderr.
+This helps catch common formatting mistakes early without blocking output.
+
+- Unclosed fenced code blocks (``` or ~~~)
+- Unmatched inline code backticks on a line
+- GFM table inconsistencies (column count/alignment)
+
+Lint messages use the format `FILE:LINE: message`. Rendering continues even when
+issues are found.
+
+Disable linting with `--no-lint` or `MDVIC_NO_LINT=1`.
 
 ## Math behavior
 
@@ -102,7 +120,7 @@ Out of scope for v1: `\overbrace`, large operators with limits (`\sum_{…}` on 
 
 * **Colors**.  Uses standard or 256-color ANSI.  Disable with `--no-color` or `MDVIC_NO_COLOR=1`.
 * **Links**.  Emits OSC-8 hyperlinks when supported by the terminal, else prints `text (URL)`.
-* **Paging**.  Pre-wrapped output is recommended with `less -R`.  mdvic performs wrapping before paging to keep alignment stable.
+* **Paging**.  By default mdvic does not soft-wrap; use `less -RS` to preserve alignment and avoid hard wrapping. Enable pre-wrap with `--wrap --width N` if desired.
 
 ## Build
 

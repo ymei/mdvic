@@ -4,9 +4,13 @@ CFLAGS ?= -O2
 CFLAGS += -std=c99 -Wall -Wextra -pedantic -Wno-unused-parameter
 LDFLAGS ?=
 
-# Try to discover libcmark via pkg-config when vendored sources are not present
-CMARK_SRC_DIR := third_party/cmark/src
-CMARK_HAVE_SRC := $(wildcard $(CMARK_SRC_DIR)/*.c)
+# libcmark linkage: prefer locally built submodule library, else pkg-config
+CMARK_SUBMODULE_DIR := third_party/cmark
+CMARK_LOCAL_BUILD := $(CMARK_SUBMODULE_DIR)/build
+CMARK_LOCAL_INC := -I$(CMARK_SUBMODULE_DIR)/src -I$(CMARK_LOCAL_BUILD)/src
+CMARK_LIB_A := $(CMARK_LOCAL_BUILD)/src/libcmark.a
+CMARK_LIB_SO := $(CMARK_LOCAL_BUILD)/src/libcmark.so
+CMARK_LIB_DYLIB := $(CMARK_LOCAL_BUILD)/src/libcmark.dylib
 CMARK_CFLAGS := $(shell pkg-config --cflags libcmark 2>/dev/null)
 CMARK_LIBS   := $(shell pkg-config --libs   libcmark 2>/dev/null)
 
@@ -19,31 +23,34 @@ SRC := \
   $(SRC_DIR)/renderer.c \
   $(SRC_DIR)/wrap.c \
   $(SRC_DIR)/wcwidth.c \
-  $(SRC_DIR)/math.c
+  $(SRC_DIR)/math.c \
+  $(SRC_DIR)/lint.c
 
 INC_FLAGS := -I$(INC_DIR)
 
-# If vendored cmark sources exist, compile them in; else try system libcmark.
-ifeq (,$(CMARK_HAVE_SRC))
-  ifneq (,$(CMARK_LIBS))
-    CFLAGS += $(CMARK_CFLAGS) -DHAVE_LIBCMARK
-    LDLIBS += $(CMARK_LIBS)
-  else
-    $(warning libcmark (cmark) not found; building without Markdown AST parsing. Rendering will be passthrough for now.)
-  endif
+# Link to libcmark if available
+ifneq (,$(wildcard $(CMARK_LIB_A)))
+  CFLAGS += -DHAVE_LIBCMARK $(CMARK_LOCAL_INC)
+  LDFLAGS +=
+  LDLIBS += $(CMARK_LIB_A)
+else ifneq (,$(wildcard $(CMARK_LIB_SO)))
+  CFLAGS += -DHAVE_LIBCMARK $(CMARK_LOCAL_INC)
+  LDLIBS += $(CMARK_LIB_SO)
+else ifneq (,$(wildcard $(CMARK_LIB_DYLIB)))
+  CFLAGS += -DHAVE_LIBCMARK $(CMARK_LOCAL_INC)
+  LDLIBS += $(CMARK_LIB_DYLIB)
+else ifneq (,$(CMARK_LIBS))
+  CFLAGS += -DHAVE_LIBCMARK $(CMARK_CFLAGS)
+  LDLIBS += $(CMARK_LIBS)
 else
-  # Build with vendored cmark
-  CMARK_SRC := $(CMARK_SRC_DIR)/cmark.c $(CMARK_SRC_DIR)/node.c $(CMARK_SRC_DIR)/block.c $(CMARK_SRC_DIR)/inlines.c $(CMARK_SRC_DIR)/iterator.c $(CMARK_SRC_DIR)/blocks.c $(CMARK_SRC_DIR)/scanners.c $(CMARK_SRC_DIR)/utf8.c $(CMARK_SRC_DIR)/buffer.c $(CMARK_SRC_DIR)/references.c $(CMARK_SRC_DIR)/man.c $(CMARK_SRC_DIR)/html.c $(CMARK_SRC_DIR)/latex.c $(CMARK_SRC_DIR)/xml.c $(CMARK_SRC_DIR)/commonmark.c
-  SRC += $(CMARK_SRC)
-  CFLAGS += -DHAVE_LIBCMARK -Ithird_party/cmark/src
+  $(warning libcmark (cmark) not found; building without Markdown AST parsing. Rendering will be passthrough for now.)
 endif
 
-OBJ := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(filter $(SRC_DIR)/%.c,$(SRC))) \
-       $(patsubst third_party/cmark/%.c,$(BUILD_DIR)/third_party/cmark/%.o,$(filter third_party/cmark/%.c,$(SRC)))
+OBJ := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRC))
 
 BIN := mdvic
 
-.PHONY: all clean fmt
+.PHONY: all clean fmt cmark test check
 
 all: $(BIN)
 
@@ -54,13 +61,33 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(INC_FLAGS) -c $< -o $@
 
-$(BUILD_DIR)/third_party/cmark/%.o: third_party/cmark/%.c
-	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -Ithird_party/cmark/src -c $< -o $@
-
 clean:
 	rm -rf $(BUILD_DIR) $(BIN)
 
 fmt:
 	@echo "No formatter configured; skip."
 
+# Build the cmark submodule locally with CMake (Release static library)
+cmark:
+	@if command -v cmake >/dev/null 2>&1; then \
+	  echo "Configuring cmark in $(CMARK_LOCAL_BUILD)..."; \
+	  cmake -S $(CMARK_SUBMODULE_DIR) -B $(CMARK_LOCAL_BUILD) -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF >/dev/null; \
+	  echo "Building cmark..."; \
+	  cmake --build $(CMARK_LOCAL_BUILD) --config Release -- -j >/dev/null; \
+	  echo "cmark built."; \
+	else \
+	  echo "cmake not found; install CMake to build libcmark locally."; \
+	  exit 1; \
+	fi
+
+test: all
+	@echo "Running tests..."
+	@WIDTH=40 MDVIC_NO_COLOR=1 MDVIC_NO_OSC8=1 tests/run.sh
+
+check: test
+
+.PHONY: wcwidth-table
+wcwidth-table:
+	@ENV_OK=1; \
+	if [ -z "$$UNICODE_DIR" ]; then echo "Set UNICODE_DIR to directory containing UnicodeData.txt and EastAsianWidth.txt"; exit 1; fi; \
+	sh tools/gen_wcwidth.sh

@@ -8,7 +8,7 @@
 
 static void print_usage(const char *prog) {
     fprintf(stderr,
-            "Usage: %s [--no-color] [--width N] [--math {unicode|ascii}] [FILE...]\n",
+            "Usage: %s [--no-color] [--no-lint] [--wrap|--no-wrap] [--width N] [--math {unicode|ascii}] [FILE...]\n",
             prog);
 }
 
@@ -30,6 +30,9 @@ int main(int argc, char **argv) {
     opt.no_color = false;
     opt.width = 0;
     opt.math_mode = MDVIC_MATH_UNICODE;
+    opt.enable_lint = true;
+    opt.enable_wrap = false; /* default no-wrap */
+    opt.enable_osc8 = true;
 
     mdvic_apply_env_overrides(&opt);
 
@@ -39,6 +42,7 @@ int main(int argc, char **argv) {
     while (i < argc) {
         const char *arg = argv[i];
         if (strcmp(arg, "--") == 0) { i++; break; }
+        if (strcmp(arg, "-") == 0) { break; }
         if (strcmp(arg, "-h") == 0 || strcmp(arg, "--help") == 0) {
             print_usage(prog);
             return 0;
@@ -68,6 +72,18 @@ int main(int argc, char **argv) {
             else if (strcmp(m, "ascii") == 0) opt.math_mode = MDVIC_MATH_ASCII;
             else { fprintf(stderr, "Invalid math mode: %s\n", m); return 2; }
             i += 2;
+        } else if (strcmp(arg, "--no-lint") == 0) {
+            opt.enable_lint = false; i++;
+        } else if (strcmp(arg, "--lint") == 0) {
+            opt.enable_lint = true; i++;
+        } else if (strcmp(arg, "--wrap") == 0) {
+            opt.enable_wrap = true; i++;
+        } else if (strcmp(arg, "--no-wrap") == 0) {
+            opt.enable_wrap = false; i++;
+        } else if (strcmp(arg, "--no-osc8") == 0) {
+            opt.enable_osc8 = false; i++;
+        } else if (strcmp(arg, "--osc8") == 0) {
+            opt.enable_osc8 = true; i++;
         } else if (arg[0] == '-') {
             fprintf(stderr, "Unknown option: %s\n", arg);
             print_usage(prog);
@@ -77,7 +93,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    if (opt.width == 0) {
+    if (opt.enable_wrap && opt.width == 0) {
         int detected = mdvic_detect_width();
         if (detected > 0) opt.width = detected;
     }
@@ -91,11 +107,16 @@ int main(int argc, char **argv) {
         int first = 1;
         for (; i < argc; i++) {
             const char *path = argv[i];
-            FILE *fp = fopen(path, "rb");
-            if (!fp) {
-                fprintf(stderr, "mdvic: cannot open '%s': %s\n", path, strerror(errno));
-                exit_code = 1;
-                continue;
+            FILE *fp = NULL;
+            if (strcmp(path, "-") == 0) {
+                fp = stdin;
+            } else {
+                fp = fopen(path, "rb");
+                if (!fp) {
+                    fprintf(stderr, "mdvic: cannot open '%s': %s\n", path, strerror(errno));
+                    exit_code = 1;
+                    continue;
+                }
             }
             if (!first) {
                 /* Separator line between files */
@@ -105,7 +126,7 @@ int main(int argc, char **argv) {
             if (mdvic_render_stream(fp, stdout, &opt, path) != 0) {
                 exit_code = 1;
             }
-            fclose(fp);
+            if (fp != stdin) fclose(fp);
             first = 0;
         }
     }
